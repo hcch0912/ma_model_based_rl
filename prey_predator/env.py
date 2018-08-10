@@ -25,8 +25,6 @@ class Actor:
 		v = self.vel 
 		for i in range(2):
 			sign_a = np.sign(acceleration[i])
-			print(sign_a)
-			print(v[i])
 			if np.sign(v[i]) == sign_a:
 				self.vel[i] = 0.8*(v[i]+acceleration[i])
 			else:
@@ -34,7 +32,7 @@ class Actor:
 			
 
 class PreyPredatorEnv():
-	def __init__(self,screen_size = 200,  view_size = 100, prey_num = 1, predator_num = 4 ):
+	def __init__(self,screen_size = 200,   prey_num = 1, predator_num = 4 ):
 		self.viewer = None
 		self.canvas = pygame.Surface((CUBE_SIZE, CUBE_SIZE))
 		self.screen = sarray.array3d(self.canvas)
@@ -47,7 +45,6 @@ class PreyPredatorEnv():
 		self.prey_reward = []
 		self.predator_reward = []
 		self.rng = np.random.RandomState()
-		self.view_size = view_size
 		self.screen_size = screen_size
 		for i in range(prey_num):
 			self.prey.append(Actor(role = "prey_{}".format(i), pos = [np.random.randint(0, self.screen_size), np.random.randint(0, self.screen_size)], vel = [0,0]))
@@ -130,7 +127,7 @@ class PreyPredatorEnv():
 		
 
 		# for each actor, return a 100 x 100 cube observation, POMAP
-		# obs shape 5 x 100 x 100 
+		# obs 5 x 2 
 		obs = []
 		for i in range(self.prey_num):
 			obs.append(self.get_obs(self.prey[i]))
@@ -146,13 +143,15 @@ class PreyPredatorEnv():
 		if actor.role == self.prey[0].role:
 			for i in range(4):
 				obs.append(self.predator[i].pos)
+			return obs
 		else:
 			for i in range(4):
 				if actor.role == self.predator[i].role:
 					continue
 				else:	
-					obs.append(self.predator[i].role)
-			obs.append(self.prey[0].pos)				
+					obs.append(self.predator[i].pos)
+			obs.append(self.prey[0].pos)	
+			return obs				
 
 	def render(self,mode='human',close=False, image = None):
 		if close:

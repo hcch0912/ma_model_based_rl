@@ -37,7 +37,6 @@ def parse_args():
     parser.add_argument("--train_mode", type =  bool, default = False, help = "train mode")
     parser.add_argument("--simu_episode", type = int, default = 5, help = "simulate how many episodes")
     parser.add_argument("--screen_size", type = int, default = 200, help = "game screen size")
-    parser.add_argument("--view_size", type = int, default = 100, help = "POMDP, partial obs size")
     parser.add_argument("--rnn_model_dir",type = str, default = 'rnn/rnn.json', help  = "load the pretrained rnn model")
     parser.add_argument("--agent_num", type = int, default = 2, help = "total number of agent")
     parser.add_argument("--action_space", type = int, default = 2, help = "action space for each agent")
@@ -216,7 +215,7 @@ def make_env(arglist, seed=-1, render_mode=False, full_episode=False):
     if arglist.game == "Pong-2p-v0":
       return PongGame(competitive = arglist.competitive)
     if arglist.game == "prey_predator":
-      return PreyPredatorEnv( view_size = arglist.view_size )  
+      return PreyPredatorEnv()  
 
 # for train model use 
 def main():

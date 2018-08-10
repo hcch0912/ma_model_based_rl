@@ -28,11 +28,20 @@ def parse_args():
     parser.add_argument("--action_space", type = int, default = 2, help = "action space for each agent")
     parser.add_argument("--inference", type = bool, default = False, help = "use inference in policy or not")
     parser.add_argument("--obs_size", type = int, default = 6, help = "observation size")
+
     parser.add_argument("--exp_mode", type = int, default = 4, help = "control the feature concat")
 
     return parser.parse_args()
 
 
+def get_act_traj(act_traj_list, i):
+    oppo = []
+    for j in range(5):
+        if j == i : continue
+        else:
+            oppo.append(deepcopy(act_traj[j]))
+
+    return oppo
 
 
 if __name__ == '__main__':
@@ -103,7 +112,6 @@ if __name__ == '__main__':
         # U.initialize()
         for trial in range(arglist.max_trials):
             try:
-                random_generated_int = ran
                 random_generated_int = random.randint(0, 2**31-1)
                 prey_filename = os.path.join(arglist.data_dir, "prey",str(random_generated_int)+".npz")
                 predator_filename = os.path.join(arglist.data_dir, "predator", str(random_generated_int)+".npz") 
@@ -118,44 +126,50 @@ if __name__ == '__main__':
                 prey_model.reset()
                 predator_model.reset()
                 obs = env.reset() #
+                act_traj = []
+                for i in range(arglist.agent_num):
+                    act_traj.append(collections.deque(np.zeros((arglist.timestep, arglist.action_space)), maxlen = arglist.timestep))
 
                 for frame in range(arglist.max_frames):
-                    act_traj = [collections.deque(np.zeros((arglist.timestep, arglist.action_space)), maxlen = arglist.timestep)] *( arglist.agent_num)
 
                     if arglist.render_mode:
                         env.render("human")
                     else:
                         env.render("rgb_array")
-                      
+                    
                     action_episode = [] 
-                    recording_obs.append(obs)
-                    action0 = prey_model.get_action(obs[0], act_traj[0])
+                    for i in range(5):
+                        recording_obs[i].append(obs[i])
+                    action0 = prey_model.get_action(obs[0], get_act_traj(deepcopy(act_traj), 0))
                     action_episode.append(action0)
                     
                     for i in range(1,5):
-                        action1 = predator_model.get_action(obs[i], act_traj[i])
+                        action1 = predator_model.get_action(obs[i], get_act_traj(deepcopy(act_traj), i))
                         action_episode.append(action1)
-                    recording_action.append(action_episode) 
-                    recording_act_traj.append(copy.copy(act_traj))
 
-                    for i in range(5):
-                        recording_act_traj[i].append(act_traj[i])
-                    obs,rewards, done, _ = env.step(action_episode)
+                    for i in range(5):    
+                        recording_action[i].append(action_episode) 
+                        recording_act_traj[i].append(get_act_traj(deepcopy(act_traj), i))
+                        act_traj[i].append(action_episode[i])        
+
+                    obs_,rewards, done, _ = env.step(action_episode)
+                    assert np.array(obs).size == np.array(obs_).size, "obs size not match"
+                    obs = obs_
                     if done: break
                 total_frames += (frame+1)  
                 print("dead at", frame+1, "total recorded frames for this worker", total_frames)
-                recording_obs = np.array(recording_obs, dtype=np.uint8)
+                recording_obs = np.array(recording_obs,dtype= np.float16)
                 recording_action = np.array(recording_action, dtype=np.float16)  
-                recording_act_traj = np.array(copy.copy(recording_act_traj), dtype = np.float16)
-                np.savez_compressed(prey_filename, obs = recording_obs[0], action = recording_action[0],act_traj =recording_act_traj[1:])   
+                recording_act_traj = np.array(deepcopy(recording_act_traj), dtype = np.float16)
+                np.savez_compressed(prey_filename, obs = recording_obs[0], action = recording_action[0],act_traj = deepcopy(recording_act_traj[0]))  
                 for i in range(1,5):
-                    oppo = []
-                    oppo.append(recording_act_traj[0])
-                    for j in range(1,5):
-                        if i ==j : continue
-                    else:
-                        oppo.append(recording_act_traj[j])
-                    np.savez_compressed(prey_filename, obs = recording_obs[i], action = recording_action[i],act_traj =oppo)     
+                #     oppo = []
+                #     oppo.append(deepcopy(recording_act_traj[0]))
+                #     for j in range(1,5):
+                #         if i ==j : continue
+                #     else:
+                #         oppo.append(deepcopy(recording_act_traj[j]))
+                    np.savez_compressed(predator_filename, obs = recording_obs[i], action = recording_action[i],act_traj =recording_act_traj)     
             except gym.error.Error:
               print("stupid gym error, life goes on")
               env.close()
@@ -165,5 +179,5 @@ if __name__ == '__main__':
 
 
 
-
+            
 
